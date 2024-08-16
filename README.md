@@ -1,0 +1,1 @@
+This projects include analyzing the data from the four datasets that centers around WHO health statistics data including country codes and indicators. Mostly health statistics from ASEAN and their indicators are analyzed and identified using intermediate R including writing functions.
