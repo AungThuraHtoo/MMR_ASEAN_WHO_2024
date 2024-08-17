@@ -1,0 +1,477 @@
+---
+title: "WHO_Stat_Analysis"
+author: "Aung Thura Htoo"
+date: "2024-08-15"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r}
+options(repos = c(CRAN = "https://cran.rstudio.com/"))
+install.packages("tidyverse")
+library(tidyverse)
+```
+
+**Load and check the WHO health statistics data**
+
+Dataset link - <https://www.who.int/data/gho/publications/world-health-statistics>
+
+```{r}
+data <- read.csv("D:/me/R-Language/Practice/Dataset/health_stat_WHO_May2024.csv")
+
+head(data)
+str(data)
+#10503 rows and 9 columns
+```
+
+**WHO data for ASEAN countries**
+
+```{r}
+data_ASEAN <- data %>% filter(DIM_GEO_CODE %in% c("MMR", "BRN","KHM", "IDN", "LAO", "MYS",  "PHL", "SGP", "THA", "VNM"))
+```
+
+**To understand the indicator values**
+
+```{r}
+unique(data_ASEAN$IND_NAME)
+```
+
+```{r}
+unique(data_ASEAN$IND_CODE)
+```
+
+There are **56 indicators** in this dataset for ASEAN.
+
+1.  **Age-standardized prevalence of obesity among adults (18+ years) (%)**
+
+```{r}
+data_ASEAN_NCD_BMI_30A <- data_ASEAN %>% 
+  group_by(DIM_GEO_CODE, DIM_TIME_YEAR) %>% 
+  filter(IND_CODE == "NCD_BMI_30A") %>% 
+  select(DIM_GEO_CODE, DIM_TIME_YEAR,DIM_1_CODE, IND_CODE, VALUE_NUMERIC) %>%
+  arrange(desc(VALUE_NUMERIC))
+
+data_ASEAN_NCD_BMI_30A
+```
+
+```{r}
+data_ASEAN_NCD_BMI_30A %>% 
+  ggplot(aes(x = VALUE_NUMERIC, y = reorder(DIM_GEO_CODE, VALUE_NUMERIC), color = VALUE_NUMERIC)) +
+  geom_point(size = 4) +
+  geom_segment(aes(xend = 0, yend = reorder(DIM_GEO_CODE, VALUE_NUMERIC)), linewidth = 2) +
+  geom_text(aes(label = round(VALUE_NUMERIC, 2)), color = "white", size = 1.5) +
+  geom_vline(xintercept = mean(data_ASEAN_NCD_BMI_30A$VALUE_NUMERIC), color = "black", linetype = "dashed") +  # Add vertical line at the average VALUE_NUMERIC
+  scale_x_continuous(
+    "", 
+    expand = c(0, 0), 
+    limits = c(0, 50), 
+    breaks = seq(0, 50, by = 5),  # Set breaks by 5
+    position = "top"
+  ) +
+  scale_y_discrete("", expand = expansion(mult = c(0.05, 0.1))) +  # Add space on y-axis and "", = removes the y-axis title
+  scale_color_gradientn(colors = c("lightblue", "darkblue"), name = NULL) + # name = NULL - Remove legend title
+  labs(
+    title = "NCD_BMI_30A % in ASEAN Countries - 2022 ",
+    caption = "Data Source: WHO_Health_Statistics_2024"
+  ) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.caption = element_text(hjust = 0, size = 8),  # Align "Source" to the left
+    plot.caption.position = "panel"  # Adjust position of caption inside the panel
+  ) +
+  annotate("text",x = Inf,y = -Inf,label = "\u00A9 Thura",hjust = 1.1, vjust = -1,size = 3)
+
+```
+
+**Brunei has the highest percentage of population that are over 30 BMI and Vietnam has the lowest.**
+
+------------------------------------------------------------------------
+
+**Creating Functions for table and plot**
+
+```{r}
+table <- function(data, ind_code) {
+  data <- data %>% 
+    group_by(DIM_GEO_CODE, DIM_TIME_YEAR) %>% 
+    filter(IND_CODE == ind_code) %>% 
+    select(DIM_GEO_CODE, DIM_TIME_YEAR, IND_CODE,DIM_1_CODE, VALUE_NUMERIC) %>%
+    arrange(desc(VALUE_NUMERIC)) }
+
+  plot <- function(data, ind_code, title_suffix, unit, x,y) {  
+  data %>% 
+    ggplot(aes(x = VALUE_NUMERIC, y = reorder(DIM_GEO_CODE, VALUE_NUMERIC), color = VALUE_NUMERIC)) +
+    geom_point(size = 4) +
+    geom_segment(aes(xend = 0, yend = reorder(DIM_GEO_CODE, VALUE_NUMERIC)), linewidth = 2) +
+    geom_text(aes(label = round(VALUE_NUMERIC, 2)), color = "white", size = 1.5) +
+    geom_vline(xintercept = mean(data$VALUE_NUMERIC), color = "black", linetype = "dashed") +
+    scale_x_continuous(
+      "", 
+      expand = c(0,0), 
+      limits = c(0, x), 
+      breaks = seq(0, x, by = y),  
+      position = "top"
+    ) +
+    scale_y_discrete("", expand = expansion(mult = c(0.05, 0.1))) +  
+    scale_color_gradientn(colors = c("lightblue", "darkblue"), name = NULL) +
+    labs(
+      title = paste(ind_code,unit, " in ASEAN Countries -", title_suffix),
+      caption = "Data Source: WHO_Health_Statistics_2024"
+    ) +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      plot.caption = element_text(hjust = 0, size = 8),  # Align "Source" to the left
+    plot.caption.position = "panel"  # Adjust position of caption inside the panel
+    ) +
+  annotate("text",x = Inf,y = -Inf,label = "\u00A9 Thura",hjust = 1.1, vjust = -1,size = 3)
+}
+
+```
+
+------------------------------------------------------------------------
+
+2.  **Age-standardized prevalence of tobacco use among persons 15 years and older (%)**
+
+```{r}
+t_M_Est_tob_curr_std <- table(data_ASEAN,"M_Est_tob_curr_std")
+t_M_Est_tob_curr_std
+```
+
+```{r}
+#Plotting
+plot(t_M_Est_tob_curr_std, "M_Est_tob_curr_std", "2022", "%", 50, 5)
+```
+
+**Myanmar has the highest percentage of population in tobacco use (45%) and Brunei and Singapore have the lowest (16.4%).**
+
+------------------------------------------------------------------------
+
+3\. **Annual mean concentrations of fine particulate matter (PM2.5) in urban areas (**\xe\*\*6g/m3)\*\*
+
+```{r}
+#Table
+t_SDGPM25 <- table(data_ASEAN,"SDGPM25")
+t_SDGPM25
+```
+
+```{r}
+#Plotting
+plot(t_SDGPM25, "SDGPM25", "2019", "%", 50,5)
+```
+
+**Myanmar has the highest mean concentration of PM2.5 in urban areas (27.75%) and Brunei has the lowest (6.76%).**
+
+------------------------------------------------------------------------
+
+4.  **Diphtheria-tetanus-pertussis (DTP3) immunization coverage among 1-year-olds (%)**
+
+```{r}
+#Table
+t_WHS4_100 <- table(data_ASEAN,"WHS4_100")
+t_WHS4_100
+```
+
+```{r}
+#Plotting
+plot(t_WHS4_100, "WHS4_100", "2022", "%", 100,10)
+```
+
+**Brunei has the highest DTP3 immunization coverage (99%) and Myanmar has the lowest (71%).**
+
+------------------------------------------------------------------------
+
+5.  **Healthy life expectancy at birth (years)**
+
+```{r}
+t_WHOSIS_0002 <- table(data_ASEAN,"WHOSIS_0002")
+t_WHOSIS_0002
+```
+
+```{r}
+#Plotting
+plot(t_WHOSIS_0002, "WHOSIS_0002", "2021", "%", 100,20)+facet_wrap(~DIM_1_CODE)
+```
+
+**Singapore has the highest healthy life expectancy at birth while Philippines and Myanmar have the lowest.**
+
+------------------------------------------------------------------------
+
+6.  **Life expectancy at birth (years)**
+
+```{r}
+t_WHOSIS_0001 <- table(data_ASEAN,"WHOSIS_0001")
+t_WHOSIS_0001
+```
+
+```{r}
+#Plotting
+plot(t_WHOSIS_0001, "WHOSIS_0001", "2021", "%", 100,20)+facet_wrap(~DIM_1_CODE)
+```
+
+**Singapore has the highest healthy life expectancy at birth while Philippines and Myanmar have the lowest.**
+
+------------------------------------------------------------------------
+
+7.  **Domestic general government health expenditure (GGHE-D) as percentage of general government expenditure (GGE) (%)**
+
+```{r}
+t_GHED_GGHE_DGGE_SHA2011 <- table(data_ASEAN,"GHED_GGHE-DGGE_SHA2011")
+t_GHED_GGHE_DGGE_SHA2011
+```
+
+```{r}
+#Plotting
+plot(t_GHED_GGHE_DGGE_SHA2011, "GHED_GGHE-DGGE_SHA2011", "2021", "%", 25,5)
+```
+
+**Singapore has the highest government health expenditure (20.81%) while Myanmar has the lowest (4.39%).**
+
+------------------------------------------------------------------------
+
+8.  **Probability of dying from any of CVD, cancer, diabetes, CRD between age 30 and exact age 70 (%)**
+
+```{r}
+t_NCDMORT3070 <- table(data_ASEAN,"NCDMORT3070")
+t_NCDMORT3070
+```
+
+```{r}
+#Plotting
+plot(t_NCDMORT3070, "NCDMORT3070", "2019", "%", 30,5)
+```
+
+**Laos has the highest probability (27.07%) of people between 30 and 70 dying from any of CVD, cancer, diabetes, CRD while Singapore has the lowest (8.74%).**
+
+------------------------------------------------------------------------
+
+9.  **Suicide mortality rate (per 100 000 population)**
+
+```{r}
+t_SDGSUICIDE <- table(data_ASEAN,"SDGSUICIDE")
+t_SDGSUICIDE
+```
+
+```{r}
+#Plotting
+plot(t_SDGSUICIDE, "SDGSUICIDE", "2021", "per 100,000", 20,5)
+```
+
+**Thailand has the highest suicide mortality rate (16.39) per 100000 while Indonesia has the lowest (1.21).**
+
+------------------------------------------------------------------------
+
+10. **Road traffic mortality rate (per 100 000 population)**
+
+```{r}
+t_SA_0000001688 <- table(data_ASEAN,"SA_0000001688")
+t_SA_0000001688
+```
+
+```{r}
+#Plotting
+plot(t_SA_0000001688, "SA_0000001688", "2019", "per 100,000", 15,5)
+```
+
+**Laos has the highest Road Traffic mortality rate (11.52) per 100000 while Indonesia has the lowest (0.11).**
+
+------------------------------------------------------------------------
+
+11. **Tuberculosis incidence (per 100 000 population)**
+
+```{r}
+t_MDG_0000000020 <- table(data_ASEAN,"MDG_0000000020")
+t_MDG_0000000020
+```
+
+```{r}
+#Plotting
+plot(t_MDG_0000000020, "MDG_0000000020", "2022", "per 100,000", 700,100)
+```
+
+**Philippines has the highest tuberculosis incidence (638) per 100000 while Singapore has the lowest (51).**
+
+------------------------------------------------------------------------
+
+12. **Malaria incidence (per 1000 population at risk)**
+
+```{r}
+t_MDG_MALARIA_EST_INCIDENCE <- table(data_ASEAN,"MALARIA_EST_INCIDENCE")
+t_MDG_MALARIA_EST_INCIDENCE
+```
+
+```{r}
+#Plotting
+plot(t_MDG_MALARIA_EST_INCIDENCE, "MDG_MALARIA_EST_INCIDENCE", "2022", "per 100,000", 20,2)
+```
+
+**Myanmar has the highest malaria estimate incidence per 100,000 at risk while Malaysia has the lowest.**
+
+------------------------------------------------------------------------
+
+13. **Proportion of population using safely-managed drinking-water services (%)**
+
+```{r}
+t_WSH_WATER_SAFELY_MANAGED <- table(data_ASEAN,"WSH_WATER_SAFELY_MANAGED")
+t_WSH_WATER_SAFELY_MANAGED
+```
+
+```{r}
+#Plotting
+plot(t_WSH_WATER_SAFELY_MANAGED, "WSH_WATER_SAFELY_MANAGED", "2022", "%", 100,20)
+```
+
+**Singapore has the all its population using safely-managed drinking-water services while Laos has the lowest percentage, only 17%.**
+
+------------------------------------------------------------------------
+
+14. **Measles-containing-vaccine second-dose (MCV2) immunization coverage by the locally recommended age (%)**
+
+```{r}
+t_MCV2 <- table(data_ASEAN,"MCV2")
+t_MCV2
+```
+
+```{r}
+#Plotting
+plot(t_MCV2, "MCV2", "2022", "%", 100,20)
+```
+
+**Brunei has highest vaccine coverage for MCV2 (99%) while Laos has the lowest, 55%.**
+
+------------------------------------------------------------------------
+
+**Estimate of current tobacco use prevalence (%) (age-standardized rate) - MMR - SDG 3.a**
+
+```{r}
+data2 <- read.csv("D:/me/R-Language/Practice/Dataset/M_Est_tob_curr_std_2024.csv")
+
+head(data2)
+str(data2)
+```
+
+```{r}
+data2_MMR <- data2 %>% filter(SpatialDimValueCode =="MMR", IndicatorCode == "M_Est_tob_curr_std") %>% select(IndicatorCode,Period, Dim1ValueCode, FactValueNumeric)
+
+str(data2_MMR)
+```
+
+```{r}
+ggplot(data2_MMR, aes(x = Period, y = FactValueNumeric)) +
+  geom_line() +
+  labs(title = "Trend of Estimate of current tobacco use % over Time",
+       caption = "Data Source: WHO_Health_Statistics_2024") + 
+  facet_wrap(~Dim1ValueCode) +
+  annotate("text", x = Inf, y = -Inf, label = "\u00A9 Thura", hjust = 1.1, vjust = -1, size = 3) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank())
+
+```
+
+------------------------------------------------------------------------
+
+**DTP3 immunization - MMR from 2000 to 2022**
+
+WHO_Data_link - <https://data.who.int/countries/104> or <https://www.who.int/data/gho>
+
+```{r}
+data3 <- read.csv("D:/me/R-Language/Practice/Dataset/RELAY_WHS_DTP3_2024.csv")
+
+head(data3)
+str(data3)
+```
+
+```{r}
+data3_MMR <- data3 %>% filter(GEO_NAME_SHORT =="Myanmar") %>% select(DIM_TIME,RATE_PER_100_N)
+```
+
+```{r}
+pDTP3<- ggplot(data3_MMR, aes(x = DIM_TIME, y = RATE_PER_100_N)) +
+  geom_line(color="blue") +
+  geom_hline(yintercept = mean(data3_MMR$RATE_PER_100_N), color = "darkgray", linetype = "dashed") +
+  coord_fixed(0.1) +
+  labs(title = "Trend of DTP3 immunization - MMR from 2000 to 2022",
+       caption = "Data Source: WHO_Health_Statistics_2024") +
+  annotate("text", x = Inf, y = -Inf, label = "\u00A9 Thura", hjust = 1.1, vjust = -1, size = 3) +
+  scale_x_continuous(breaks = seq(min(data3_MMR$DIM_TIME), max(data3_MMR$DIM_TIME), by = 2)) + 
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank())
+
+pDTP3
+```
+```{r}
+library(plotly)
+```
+
+```{r}
+plotDTP3 <- ggplotly(pDTP3) %>%
+  layout(
+    hoverlabel = list(bgcolor = "gray")
+  ) %>%
+  add_annotations(
+    x = 1, 
+    y = 0, 
+    text = "\u00A9 Thura", 
+    showarrow = FALSE, 
+    xref = "paper", 
+    yref = "paper", 
+    xanchor = "right", 
+    yanchor = "bottom", 
+    font = list(size = 12)
+  )
+
+plotDTP3
+```
+
+
+
+------------------------------------------------------------------------
+
+**MCV2 immunization - MMR from 2008 to 2022**
+
+```{r}
+data4 <- read.csv("D:/me/R-Language/Practice/Dataset/RELAY_WHS_MCV2_2024.csv")
+
+head(data4)
+str(data4)
+```
+
+```{r}
+data4_MMR <- data4 %>% filter(GEO_NAME_SHORT =="Myanmar") %>% select(DIM_TIME,RATE_PER_100_N)
+```
+
+```{r}
+pMCV2 <- ggplot(data4_MMR, aes(x = DIM_TIME, y = RATE_PER_100_N)) +
+  geom_line(color = "brown") +  
+  coord_fixed(0.08) +
+  geom_hline(yintercept = mean(data4_MMR$RATE_PER_100_N), color = "darkgray", linetype = "dashed") +
+  labs(title = "Trend of MCV2 immunization - MMR from 2008 to 2022",
+       caption = "Data Source: WHO_Health_Statistics_2024") +
+  annotate("text", x = Inf, y = -Inf, label = "\u00A9 Thura", hjust = 1.1, vjust = -1, size = 3) +
+  scale_x_continuous(breaks = seq(min(data3_MMR$DIM_TIME), max(data3_MMR$DIM_TIME), by = 2)) + 
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank())
+
+pMCV2
+```
+```{r}
+plotMCV2<- ggplotly(pMCV2) %>%
+  layout(
+    hoverlabel = list(bgcolor = "gray")
+  ) %>%
+  add_annotations(
+    x = 1, 
+    y = 0, 
+    text = "\u00A9 Thura", 
+    showarrow = FALSE, 
+    xref = "paper", 
+    yref = "paper", 
+    xanchor = "right", 
+    yanchor = "bottom", 
+    font = list(size = 12)
+  )
+
+plotMCV2
+```
+
